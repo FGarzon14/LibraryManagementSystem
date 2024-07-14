@@ -43,7 +43,9 @@ public class AdminWindow {
 		adminWindow.setVisible(true);
 		
 		
-		addUser.addActionListener(e -> new AdminAddUser());
+		addUser.addActionListener(e -> new AdminAddUserPanel());
+		removeUser.addActionListener(e -> new AdminRemoveUserPanel());
+		addBook.addActionListener(e -> new AdminAddBookPanel());
 	}
 
 	public static void main(String[] args) {
