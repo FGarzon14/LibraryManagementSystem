@@ -46,6 +46,8 @@ public class AdminWindow {
 		addUser.addActionListener(e -> new AdminAddUserPanel());
 		removeUser.addActionListener(e -> new AdminRemoveUserPanel());
 		addBook.addActionListener(e -> new AdminAddBookPanel());
+		removeBook.addActionListener(e -> new AdminRemoveBookPanel());
+		issueBook.addActionListener(e -> new AdminIssueBookPanel());
 	}
 
 	public static void main(String[] args) {

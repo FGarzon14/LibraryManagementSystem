@@ -123,6 +123,129 @@ public class AdminFunctions {
 			}
 		
 		
+		/*
+		 * Función para eliminar un libro de la DB
+		 */
+		
+		public void removeBook(String title, String author, Integer ISBN, java.sql.Date publishingDate
+				, String publishingHouse, String genre) {
+			StringBuilder query = new StringBuilder("DELETE FROM libros WHERE 1 = 1");
+			
+			if(title != null && !title.isEmpty()) {
+				query.append(" AND libro_titulo LIKE ?");
+			}
+			if(author != null && !author.isEmpty()) {
+				query.append(" AND libro_autor LIKE ?");
+			}
+			if(ISBN != null) {
+				query.append(" AND ISBN LIKE ?");
+			}
+			if(publishingDate != null) {
+				query.append(" AND fecha_publicacion LIKE ?");
+			}
+			if(publishingHouse != null && !publishingHouse.isEmpty()) {
+				query.append(" AND editorial LIKE ?");
+			}
+			if(genre != null && !genre.isEmpty()) {
+				query.append(" AND libro_genero LIKE ?");
+			}
+			
+			try (Connection connection = conexionDB.getConnection();
+				     PreparedStatement statement = connection.prepareStatement(query.toString())) {
+
+				    int paramIndex = 1;
+				    
+				    if (title != null && !title.isEmpty()) {
+				        statement.setString(paramIndex++, "%" + title + "%");
+				    }
+				    if (author != null && !author.isEmpty()) {
+				        statement.setString(paramIndex++, "%" + author + "%");
+				    }
+				    if (ISBN != null) {
+				        statement.setString(paramIndex++, "%" + ISBN + "%");
+				    }
+				    if (publishingDate != null) {
+				        statement.setString(paramIndex++, "%" + publishingDate + "%");
+				    }
+				    if (publishingHouse != null && !publishingHouse.isEmpty()) {
+				        statement.setString(paramIndex++, "%" + publishingHouse + "%");
+				    }
+				    if (genre != null && !genre.isEmpty()) {
+				        statement.setString(paramIndex++, "%" + genre + "%");
+				    }
+				    
+				    int rowsAffected = statement.executeUpdate();
+				    if(rowsAffected > 0) {
+				    	JOptionPane.showMessageDialog(null, "Book(s) succesfully removed.");
+				    } else {
+				    	JOptionPane.showMessageDialog(null, "No books with the specified dates were found.");
+				    }
+				    
+				    
+			} catch (SQLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				JOptionPane.showMessageDialog(null, "Error adding the book.");
+			}
+			
+			
+			
+		}
+		
+		/*
+		 * Función para añadir un libro a la lista de prestamos
+		 */
+		public void issueBook(int bookID, String username, java.sql.Date issueDate) {
+			String checkQuery = "SELECT COUNT(*) FROM prestamos WHERE libro_ID = ? AND estado_devuelto = FALSE";
+			String getUserIDQuery = "SELECT usuario_id FROM usuarios WHERE usuario_nombre = ?";
+			String issueBookQuery = "INSERT INTO prestamos (usuario_id, libro_id, fecha_prestamo, estado_devuelto) VALUES (?, ?, ?, FALSE)";
+			try(Connection connection = conexionDB.getConnection()){
+				
+				try(PreparedStatement checkStatement = connection.prepareStatement(checkQuery)){
+				checkStatement.setInt(1, bookID);
+				ResultSet resultSet = checkStatement.executeQuery();
+				if(resultSet.next() && resultSet.getInt(1) > 0) {
+					JOptionPane.showMessageDialog(null, "This book is already issued to someone else.");
+					return;
+				}
+				//Creamos la variable para acceder a ella desde fuera del bloque try
+				int userID = -1;
+				try(PreparedStatement getUserIdStatement = connection.prepareStatement(getUserIDQuery)){
+					getUserIdStatement.setString(1, username);
+					ResultSet userIDResultSet = getUserIdStatement.executeQuery();
+					
+					if(userIDResultSet.next()) {
+						userID = userIDResultSet.getInt("usuario_id");
+					} else {
+						JOptionPane.showMessageDialog(null, "The user could not be found");
+						return;
+					}
+				}
+				
+				try(PreparedStatement issueBookStatement = connection.prepareStatement(issueBookQuery)){
+					issueBookStatement.setInt(1, userID);
+					issueBookStatement.setInt(2, bookID);
+					issueBookStatement.setDate(3, issueDate);
+					
+					issueBookStatement.executeUpdate();
+					JOptionPane.showMessageDialog(null, "Book issued correctly");
+					
+				}
+					
+				}
+				
+				
+			}  catch (SQLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				JOptionPane.showMessageDialog(null, "Error issuing the book.");
+					
+			
+			}
+		}
+		
+		
+		
 
 		    public static void main(String[] args) {
 		        // TODO Auto-generated method stub
