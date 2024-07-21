@@ -39,6 +39,7 @@ public class AdminWindow {
 		adminWindow.add(bookList);
 		adminWindow.add(issuedList);
 		adminWindow.add(returnedList);
+	
 		
 		adminWindow.setVisible(true);
 		
@@ -48,6 +49,11 @@ public class AdminWindow {
 		addBook.addActionListener(e -> new AdminAddBookPanel());
 		removeBook.addActionListener(e -> new AdminRemoveBookPanel());
 		issueBook.addActionListener(e -> new AdminIssueBookPanel());
+		returnBook.addActionListener(e -> new AdminReturnBookPanel());
+		userList.addActionListener(e -> new AdminUserListPanel());
+		bookList.addActionListener(e -> new AdminBookListPanel());
+		issuedList.addActionListener(e -> new AdminIssuedListPanel());
+		returnedList.addActionListener(e -> new AdminReturnedList());
 	}
 
 	public static void main(String[] args) {

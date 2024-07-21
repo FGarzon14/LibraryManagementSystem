@@ -8,6 +8,7 @@ public class Login {
 	
 	private static ConexionDB conexionDB;
 	private static JFrame loginFrame;
+	private static int loggedUserID;
 
 	public Login() {
 		//inicializamos la conexion a la BD
@@ -65,9 +66,15 @@ public class Login {
 					try(ResultSet resultSet = statement.executeQuery()){
 						if(resultSet.next()) {
 							//Login conseguido
+							int loggedUserID = resultSet.getInt("usuario_id");
 							JOptionPane.showMessageDialog(null, "Login succesful!");
 							loginFrame.dispose();
-							new AdminWindow();
+							if(resultSet.getInt("usuario_tipo") > 0) {
+								new AdminWindow();
+							} else {
+								new UserWindow(loggedUserID);
+							}
+							
 						} else {
 							JOptionPane.showMessageDialog(null, "Invalid username or password");
 						}
@@ -80,6 +87,10 @@ public class Login {
             }
 		}
 
+		public static int getLoggedUserId() {
+			return loggedUserID;
+		}
+		
 	    public static void main(String[] args) {
 	        new Login();
 	    }

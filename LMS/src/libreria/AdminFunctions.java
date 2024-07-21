@@ -196,11 +196,15 @@ public class AdminFunctions {
 		 * Función para añadir un libro a la lista de prestamos
 		 */
 		public void issueBook(int bookID, String username, java.sql.Date issueDate) {
+			
+			//Creamos una query diferente para cada consulta. Con checkQuery vemos si el libro se encuentra en prestamos con un estado devuelto false
+			//Con getUserIDQuery encontramos el id del usuario en base a su username
+			//Con issueBookQuery añadimos los valores a la lista prestamos.
 			String checkQuery = "SELECT COUNT(*) FROM prestamos WHERE libro_ID = ? AND estado_devuelto = FALSE";
 			String getUserIDQuery = "SELECT usuario_id FROM usuarios WHERE usuario_nombre = ?";
 			String issueBookQuery = "INSERT INTO prestamos (usuario_id, libro_id, fecha_prestamo, estado_devuelto) VALUES (?, ?, ?, FALSE)";
 			try(Connection connection = conexionDB.getConnection()){
-				
+				//Checkquery
 				try(PreparedStatement checkStatement = connection.prepareStatement(checkQuery)){
 				checkStatement.setInt(1, bookID);
 				ResultSet resultSet = checkStatement.executeQuery();
@@ -209,6 +213,60 @@ public class AdminFunctions {
 					return;
 				}
 				//Creamos la variable para acceder a ella desde fuera del bloque try
+				//getUserIdQuery
+				int userID = -1;
+				try(PreparedStatement getUserIdStatement = connection.prepareStatement(getUserIDQuery)){
+					getUserIdStatement.setString(1, username);
+					ResultSet userIDResultSet = getUserIdStatement.executeQuery();
+					
+					if(userIDResultSet.next()) {
+						userID = userIDResultSet.getInt("usuario_id");
+					} else {
+						JOptionPane.showMessageDialog(null, "The user could not be found");
+						return;
+					}
+				}
+				//Issuebookquery
+				try(PreparedStatement issueBookStatement = connection.prepareStatement(issueBookQuery)){
+					issueBookStatement.setInt(1, userID);
+					issueBookStatement.setInt(2, bookID);
+					issueBookStatement.setDate(3, issueDate);
+					
+					issueBookStatement.executeUpdate();
+					JOptionPane.showMessageDialog(null, "Book issued correctly");
+				}
+					
+				}
+			}  catch (SQLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				JOptionPane.showMessageDialog(null, "Error issuing the book.");
+					
+			
+			}
+		}
+		
+		public void returnBook(int bookId, String username, Date returnDate) {
+			//Necesitamos comprobar que el libro cuente como prestado en nuestro sistema
+			String checkQuery = "SELECT COUNT(*) FROM prestamos WHERE libro_ID = ? AND estado_devuelto = FALSE";
+			//Accedemos al usuario_id con el username
+			String getUserIDQuery = "SELECT usuario_id FROM usuarios WHERE usuario_nombre = ?";
+			//Actualizamos el valor devuelto en la lista prestamos
+			String updateStatusQuery = "UPDATE prestamos SET estado_devuelto = TRUE, fecha_devolucion = ? WHERE libro_id = ?";
+			//Insertamos los datos en la lista de devoluciones
+			String returnBookQuery = "INSERT INTO devoluciones (usuario_id, libro_id, fecha_devolucion)"
+					+ " VALUES (?, ?, ?)";
+			
+			try(Connection connection = conexionDB.getConnection()){
+				try(PreparedStatement checkStatement = connection.prepareStatement(checkQuery)){
+					checkStatement.setInt(1, bookId);
+					ResultSet resultSet = checkStatement.executeQuery();
+					if(resultSet.next() && resultSet.getInt(1) == 0) {
+						JOptionPane.showMessageDialog(null, "This book is not currently issued or has already been returned.");
+						return;
+					}
+					
+				}
 				int userID = -1;
 				try(PreparedStatement getUserIdStatement = connection.prepareStatement(getUserIDQuery)){
 					getUserIdStatement.setString(1, username);
@@ -222,30 +280,146 @@ public class AdminFunctions {
 					}
 				}
 				
-				try(PreparedStatement issueBookStatement = connection.prepareStatement(issueBookQuery)){
-					issueBookStatement.setInt(1, userID);
-					issueBookStatement.setInt(2, bookID);
-					issueBookStatement.setDate(3, issueDate);
-					
-					issueBookStatement.executeUpdate();
-					JOptionPane.showMessageDialog(null, "Book issued correctly");
-					
-				}
-					
+				try(PreparedStatement updateStatusStatement = connection.prepareStatement(updateStatusQuery)){
+					updateStatusStatement.setDate(1, returnDate);
+					updateStatusStatement.setInt(2, bookId);
+					updateStatusStatement.executeUpdate();
 				}
 				
+				try(PreparedStatement returnBookStatement = connection.prepareStatement(returnBookQuery)){
+					returnBookStatement.setInt(1, userID);
+					returnBookStatement.setInt(2, bookId);
+					returnBookStatement.setDate(3, returnDate);
+					returnBookStatement.executeUpdate();
+				}
+				JOptionPane.showMessageDialog(null, "Book returned succesfully");
 				
-			}  catch (SQLException e) {
-				// TODO Auto-generated catch block
+			} catch (SQLException e) {
 				e.printStackTrace();
-				JOptionPane.showMessageDialog(null, "Error issuing the book.");
-					
-			
+				JOptionPane.showMessageDialog(null, "Error returning the book.");
 			}
 		}
 		
 		
+		/*
+		 * Función para reproducir la lista de usuarios
+		 */
+		public DefaultListModel<String> getUserList(){
+			DefaultListModel<String> userList = new DefaultListModel<>();
+			String query = "SELECT usuario_nombre, usuario_id FROM usuarios";
+			try(Connection connection = conexionDB.getConnection()){
+				PreparedStatement statement = connection.prepareStatement(query);
+				ResultSet resultSet = statement.executeQuery();
+				
+				while(resultSet.next()) {
+					String username = resultSet.getString("usuario_nombre");
+					int userID = resultSet.getInt("usuario_id");
+					userList.addElement(userID + " - " + username);
+					
+				}
+				
+			} catch (SQLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			return userList;
+		}
 		
+		public DefaultListModel<String> getBookList(){
+		    DefaultListModel<String> bookList = new DefaultListModel<>();
+		    String query = "SELECT * FROM libros";
+		    try (Connection connection = conexionDB.getConnection()) {
+		        PreparedStatement statement = connection.prepareStatement(query);
+		        ResultSet resultSet = statement.executeQuery();
+
+		        while (resultSet.next()) {
+		            int bookId = resultSet.getInt("libro_id");
+		            String title = resultSet.getString("libro_titulo");
+		            String author = resultSet.getString("libro_autor");
+		            int ISBN = resultSet.getInt("ISBN");
+		            Date publishingDate = resultSet.getDate("fecha_publicacion");
+		            String publisher = resultSet.getString("editorial");
+		            String genre = resultSet.getString("libro_genero");
+
+		            String bookInfo = "ID: " + bookId + " - Título: " + title + " - Autor: " + author + 
+		                              " - ISBN: " + ISBN + " - Fecha de Publicación: " + publishingDate + 
+		                              " - Editorial: " + publisher + " - Género: " + genre;
+		            bookList.addElement(bookInfo);
+		        }
+
+		    } catch (SQLException e) {
+		        e.printStackTrace();
+		    }
+		    return bookList;
+		}
+		
+		public DefaultListModel<String> getIssuedList(){
+			DefaultListModel<String> issuedList = new DefaultListModel<>();
+		    String query = "SELECT p.id_prestamo, p.usuario_id, u.usuario_nombre, p.libro_id, l.libro_titulo, p.fecha_prestamo, p.fecha_devolucion, p.estado_devuelto"
+		    		+ " FROM prestamos p "
+		    		+ "JOIN usuarios u ON p.usuario_id = u.usuario_id "
+		    		+ "JOIN libros l ON p.libro_id = l.libro_id";
+		    
+		    try(Connection connection = conexionDB.getConnection()){
+		    	PreparedStatement statement = connection.prepareStatement(query);
+		    	ResultSet resultSet = statement.executeQuery();
+		    	
+		    	while(resultSet.next()) {
+		    		int issueId = resultSet.getInt("id_prestamo");
+	                String username = resultSet.getString("usuario_nombre");
+	                int bookId = resultSet.getInt("libro_id");
+	                String bookTitle = resultSet.getString("libro_titulo");
+	                Date loanDate = resultSet.getDate("fecha_prestamo");
+	                Date returnDate = resultSet.getDate("fecha_devolucion");
+	                boolean isReturned = resultSet.getBoolean("estado_devuelto");
+	                
+	                String issuedInfo = "ID Préstamo: " + issueId + " - Usuario: " + username + " - Libro ID: " + bookId +
+	                        " - Título: " + bookTitle + " - Fecha Préstamo: " + loanDate + " - Fecha Devolución: " + returnDate +
+	                        " - Devuelto: " + (isReturned ? "Sí" : "No");
+	                issuedList.addElement(issuedInfo);
+		    	}
+		    } catch (SQLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		    return issuedList;
+		}
+		
+		
+		public DefaultListModel<String> getReturnedList(){
+			DefaultListModel<String> returnedList = new DefaultListModel<>();
+			String query = "SELECT d.id_devolucion,l.libro_id, l.libro_titulo, u.usuario_id, u.usuario_nombre,  d.fecha_devolucion"
+					+ " FROM devoluciones d "
+					+ "JOIN usuarios u ON d.usuario_id = u.usuario_id "
+					+ "JOIN libros l ON d.libro_id = l.libro_id ";
+			
+			try(Connection connection = conexionDB.getConnection()){
+				PreparedStatement statement = connection.prepareStatement(query);
+				ResultSet resultSet = statement.executeQuery();
+				
+				while(resultSet.next()) {
+					int returnID = resultSet.getInt("id_devolucion");
+					int bookID = resultSet.getInt("libro_id");
+					String bookTitle = resultSet.getString("libro_titulo");
+					int userID = resultSet.getInt("usuario_id");
+					String username = resultSet.getString("usuario_nombre");
+					Date returnDate = resultSet.getDate("fecha_devolucion");
+					
+					String returnedInfo = "ID Devolución: " + returnID + " - Usuario: " + username + " - Libro ID: " + bookID +
+		                    " - Título: " + bookTitle + " - Fecha Devolución: " + returnDate;
+		            returnedList.addElement(returnedInfo);
+					
+				}
+				
+			} catch (SQLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			return returnedList;
+		}
+
 
 		    public static void main(String[] args) {
 		        // TODO Auto-generated method stub
